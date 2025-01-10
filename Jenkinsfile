@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "dynamic-index"
+        IMAGE_NAME = "webapp"
         PROJECT_NAME = "pipeline-${BUILD_ID}"
     }
 
@@ -27,14 +27,26 @@ pipeline {
                 sh 'docker-compose -p ${PROJECT_NAME} up -d'
             }
         }
-        stage('Get Webapp Port') {
+        stage('Get Container Ports') {
             steps {
                 script {
-                    def containerPort = sh(
+                    def webappPort = sh(
                         script: "docker ps --filter 'name=${PROJECT_NAME}_webapp' --format '{{.ID}}' | xargs docker inspect --format='{{(index (index .NetworkSettings.Ports \"80/tcp\") 0).HostPort}}'",
                         returnStdout: true
                     ).trim()
-                    echo "Webapp is running on: http://localhost:${containerPort}"
+                    echo "Webapp is running on: http://localhost:${webappPort}"
+
+                    def mariadbPort = sh(
+                        script: "docker ps --filter 'name=${PROJECT_NAME}_mariadb' --format '{{.ID}}' | xargs docker inspect --format='{{(index (index .NetworkSettings.Ports \"3306/tcp\") 0).HostPort}}'",
+                        returnStdout: true
+                    ).trim()
+                    echo "MariaDB is accessible on: localhost:${mariadbPort}"
+
+                    def redisPort = sh(
+                        script: "docker ps --filter 'name=${PROJECT_NAME}_redis' --format '{{.ID}}' | xargs docker inspect --format='{{(index (index .NetworkSettings.Ports \"6379/tcp\") 0).HostPort}}'",
+                        returnStdout: true
+                    ).trim()
+                    echo "Redis is accessible on: localhost:${redisPort}"
                 }
             }
         }

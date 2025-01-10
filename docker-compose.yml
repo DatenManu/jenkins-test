@@ -6,6 +6,26 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "0:80" # Dynamische externe Port-Zuweisung
+      - "0:80" # Dynamische externe Port-Zuweisung für die Web-App
     container_name: ${PROJECT_NAME}_webapp
+    depends_on:
+      - mariadb
+      - redis
+    restart: always
+
+  mariadb:
+    image: mariadb:latest
+    container_name: ${PROJECT_NAME}_mariadb
+    environment:
+      - MARIADB_ROOT_PASSWORD=root
+      - MARIADB_DATABASE=mydb
+    ports:
+      - "0:3306"
+    restart: always
+
+  redis:
+    image: redis:latest
+    container_name: ${PROJECT_NAME}_redis
+    ports:
+      - "0:6379"
     restart: always
