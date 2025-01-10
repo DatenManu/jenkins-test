@@ -1,26 +1,25 @@
-version: '3.8'
-
 services:
   mariadb:
+    container_name: "${COMPOSE_PROJECT_NAME}_mariadb"
     image: mariadb:latest
-    container_name: my-mariadb
+    ports:
+      - "3307:3306"
     environment:
       - MARIADB_ROOT_PASSWORD=root
       - MARIADB_DATABASE=mydb
-    ports:
-      - "3307:3306"
 
   redis:
+    container_name: "${COMPOSE_PROJECT_NAME}_redis"
     image: redis:latest
-    container_name: my-redis
     ports:
       - "6379:6379"
 
   webapp:
+    container_name: "${COMPOSE_PROJECT_NAME}_webapp"
     build: .
-    container_name: my-webapp
     depends_on:
       - mariadb
       - redis
     ports:
       - "8080:80"
+
