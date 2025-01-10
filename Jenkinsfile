@@ -1,7 +1,7 @@
 pipeline {
     agent any
     environment {
-        UNIQUE_BUILD_ID = "${BUILD_ID}-${env.BRANCH_NAME}" // Dynamische Namen für Container und Netzwerke
+        UNIQUE_BUILD_ID = "${BUILD_ID}-${env.BRANCH_NAME ?: 'main'}" // Dynamische Namen für Container und Netzwerke
     }
     stages {
         stage('Checkout') {
@@ -32,8 +32,12 @@ pipeline {
             steps {
                 script {
                     def containerId = sh(script: "docker ps -qf name=${UNIQUE_BUILD_ID}_webapp", returnStdout: true).trim()
-                    def port = sh(script: "docker inspect --format='{{(index (index .NetworkSettings.Ports \"80/tcp\") 0).HostPort}}' ${containerId}", returnStdout: true).trim()
-                    echo "Webapp is running on host port: ${port}"
+                    if (containerId) {
+                        def port = sh(script: "docker inspect --format='{{(index (index .NetworkSettings.Ports \"80/tcp\") 0).HostPort}}' ${containerId}", returnStdout: true).trim()
+                        echo "Webapp is running on host port: ${port}"
+                    } else {
+                        error("Container ID for webapp not found!")
+                    }
                 }
             }
         }
