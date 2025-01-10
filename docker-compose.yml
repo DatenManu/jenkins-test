@@ -24,4 +24,3 @@ services:
       - redis
     ports:
       - "80"                  # Container-Port 80, Host-Port wird dynamisch zugewiesen
-
