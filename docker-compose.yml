@@ -1,23 +1,11 @@
+version: "3.8"
+
 services:
-  mariadb:
-    image: mariadb:latest
-    container_name: ${PROJECT_NAME}_mariadb
-    environment:
-      - MARIADB_ROOT_PASSWORD=root
-      - MARIADB_DATABASE=mydb
-    ports:
-      - "3306" # Intern bleibt der Port 3306, aber extern wird dynamisch zugewiesen
-
-  redis:
-    image: redis:latest
-    container_name: ${PROJECT_NAME}_redis
-    ports:
-      - "6379" # Gleiches Prinzip wie bei mariadb
-
   webapp:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "0:80"  # Weist einen zufälligen freien Host-Port zu
+      - "0:80" # Dynamische externe Port-Zuweisung
+    container_name: ${PROJECT_NAME}_webapp
     restart: always
