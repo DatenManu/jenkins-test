@@ -11,7 +11,7 @@ pipeline {
         }
         stage('Prepare index.html') {
             steps {
-                sh 'sed -i s|{{BUILD_ID}}|${BUILD_ID}|g index.html'
+                sh 'sed -i "s|{{BUILD_ID}}|${BUILD_ID}|g" index.html'
             }
         }
         stage('Build Docker Image') {
