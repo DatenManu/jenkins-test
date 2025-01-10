@@ -15,11 +15,9 @@ services:
       - "6379" # Gleiches Prinzip wie bei mariadb
 
   webapp:
-    build: .
-    container_name: ${PROJECT_NAME}_webapp
-    depends_on:
-      - mariadb
-      - redis
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
-      - "0:80" # Der Webapp-Port wird ebenfalls dynamisch zugewiesen
-
+      - "0:80"  # Weist einen zufälligen freien Host-Port zu
+    restart: always
