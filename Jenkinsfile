@@ -1,7 +1,7 @@
 pipeline {
     agent any
     environment {
-        PROJECT_NAME = "13-main"
+        PROJECT_NAME = "pipeline-${BUILD_ID}"
     }
     stages {
         stage('Checkout') {
@@ -11,22 +11,30 @@ pipeline {
         }
         stage('Prepare index.html') {
             steps {
-                sh 'sed -i s|{{BUILD_ID}}|${BUILD_ID}|g index.html'
+                sh '''
+                sed -i "s|{{BUILD_ID}}|${BUILD_ID}|g" index.html
+                '''
             }
         }
         stage('Cleanup Existing Containers') {
             steps {
-                sh 'docker-compose -f docker-compose.yml -p ${PROJECT_NAME} down || true'
+                sh '''
+                docker-compose -f docker-compose.yml -p ${PROJECT_NAME} down || true
+                '''
             }
         }
         stage('Build Docker Image') {
             steps {
-                sh 'docker-compose -f docker-compose.yml -p ${PROJECT_NAME} build'
+                sh '''
+                docker-compose -f docker-compose.yml -p ${PROJECT_NAME} build
+                '''
             }
         }
         stage('Deploy Docker Containers') {
             steps {
-                sh 'docker-compose -f docker-compose.yml -p ${PROJECT_NAME} up -d'
+                sh '''
+                docker-compose -f docker-compose.yml -p ${PROJECT_NAME} up -d
+                '''
             }
         }
         stage('Get Webapp Port') {
