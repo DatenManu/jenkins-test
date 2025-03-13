@@ -1,7 +1,6 @@
 pipeline {
     agent any
 
-    // Definieren Sie eine Umgebungsvariable für die Container-ID
     environment {
         CONTAINER_ID = ''
     }
@@ -10,9 +9,15 @@ pipeline {
         stage('Start Docker Container') {
             steps {
                 script {
-                    // Starten Sie den Container und speichern Sie die Container-ID in der Umgebungsvariable
-                    env.CONTAINER_ID = sh(script: 'docker run -d pipeline-1-webapp', returnStdout: true).trim()
+                    // Starten des Containers und Erfassen der Container-ID
+                    def command = 'docker run -d pipeline-1-webapp'
+                    env.CONTAINER_ID = sh(script: command, returnStdout: true).trim()
                     echo "Container ID: ${env.CONTAINER_ID}"
+
+                    // Debugging: Überprüfen, ob der Container tatsächlich gestartet wurde
+                    if (env.CONTAINER_ID == '') {
+                        error "Der Container konnte nicht gestartet werden, die Container-ID ist leer."
+                    }
                 }
             }
         }
@@ -20,7 +25,6 @@ pipeline {
         stage('Stop Docker Container') {
             steps {
                 script {
-                    // Verwenden Sie die gespeicherte Container-ID zum Stoppen des Containers
                     def response = sh(script: "docker stop ${env.CONTAINER_ID}", returnStatus: true)
                     if (response == 0) {
                         echo "Ok"
@@ -34,7 +38,6 @@ pipeline {
         stage('Start Docker Container Again') {
             steps {
                 script {
-                    // Verwenden Sie die gespeicherte Container-ID zum Starten des Containers
                     def response = sh(script: "docker start ${env.CONTAINER_ID}", returnStatus: true)
                     if (response == 0) {
                         echo "Ok"
@@ -48,7 +51,6 @@ pipeline {
         stage('Remove Docker Container') {
             steps {
                 script {
-                    // Verwenden Sie die gespeicherte Container-ID zum Löschen des Containers
                     def response = sh(script: "docker rm ${env.CONTAINER_ID}", returnStatus: true)
                     if (response == 0) {
                         echo "Ok"
