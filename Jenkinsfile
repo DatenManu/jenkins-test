@@ -9,21 +9,20 @@ pipeline {
         stage('Docker Action') {
             steps {
                 script {
-                    // Die Container-ID wird aus einem lokalen Status gespeichert oder ermittelt.
-                    def containerId
+                    def containerId = ''
 
-                    // Versuchen Sie, den Container beim Starten zu starten
+                    // Wenn die Aktion 'START' gewählt wird, neuen Container starten
                     if (params.ACTION == 'START') {
-                        echo 'Starte neuen Docker-Container mit dem Image pipeline-1-webapp...'
+                        echo "Starte neuen Docker-Container mit dem Image pipeline-1-webapp..."
                         containerId = sh(script: "docker run -d pipeline-1-webapp", returnStdout: true).trim()
                         echo "Neuer Container gestartet mit ID: ${containerId}"
                         echo 'Ok - Container erfolgreich gestartet.'
                     } 
                     else {
-                        // Wenn nicht gestartete ContainerID, dann überprüfen ob der Container existiert
+                        // Überprüfen, ob ein Container bereits läuft
                         containerId = sh(script: "docker ps -q -f name=pipeline-1-webapp", returnStdout: true).trim()
                         if (!containerId) {
-                            error("Kein laufender Container mit dem Namen 'pipeline-1-webapp' gefunden.")
+                            error("Kein laufender Container mit dem Namen 'pipeline-1-webapp' gefunden. Bitte starten Sie den Container zuerst.")
                         }
                     }
 
@@ -39,13 +38,10 @@ pipeline {
                             break
 
                         case 'REMOVE':
-                            // Stellen sicher, dass der Container gestoppt ist, bevor er gelöscht wird
                             def stopResult = sh(script: "docker stop ${containerId}", returnStatus: true)
                             if (stopResult != 0) {
-                                echo 'Container konnte nicht gestoppt werden, eventuell bereits gestoppt oder nicht vorhanden.'
-                                echo 'Versuche, Container trotzdem zu löschen.'
+                                echo 'Container konnte nicht gestoppt werden.'
                             }
-
                             def removeResult = sh(script: "docker rm ${containerId}", returnStatus: true)
                             if (removeResult == 0) {
                                 echo 'Ok - Container erfolgreich gelöscht.'
