@@ -1,61 +1,48 @@
 pipeline {
     agent any
 
-    environment {
-        CONTAINER_ID = ''
+    parameters {
+        string(name: 'CONTAINER_ID', defaultValue: '', description: 'ID des Docker-Containers')
+        choice(name: 'ACTION', choices: ['START', 'STOP', 'REMOVE'], description: 'Aktion auswählen')
     }
 
     stages {
-        stage('Start Docker Container') {
+        stage('Docker Action') {
             steps {
                 script {
-                    // Starten des Containers und Erfassen der Container-ID
-                    def command = 'docker run -d pipeline-1-webapp'
-                    env.CONTAINER_ID = sh(script: command, returnStdout: true).trim()
-                    echo "Container ID: ${env.CONTAINER_ID}"
+                    def containerId = params.CONTAINER_ID
+                    def action = params.ACTION
+                    
+                    switch(action) {
+                        case 'START':
+                            def startResult = sh(script: "docker start ${containerId}", returnStatus: true)
+                            if (startResult == 0) {
+                                echo 'Ok'
+                            } else {
+                                echo 'Nicht Ok'
+                            }
+                            break
 
-                    // Debugging: Überprüfen, ob der Container tatsächlich gestartet wurde
-                    if (env.CONTAINER_ID == '') {
-                        error "Der Container konnte nicht gestartet werden, die Container-ID ist leer."
-                    }
-                }
-            }
-        }
-        
-        stage('Stop Docker Container') {
-            steps {
-                script {
-                    def response = sh(script: "docker stop ${env.CONTAINER_ID}", returnStatus: true)
-                    if (response == 0) {
-                        echo "Ok"
-                    } else {
-                        echo "Nicht Ok"
-                    }
-                }
-            }
-        }
+                        case 'STOP':
+                            def stopResult = sh(script: "docker stop ${containerId}", returnStatus: true)
+                            if (stopResult == 0) {
+                                echo 'Ok'
+                            } else {
+                                echo 'Nicht Ok'
+                            }
+                            break
 
-        stage('Start Docker Container Again') {
-            steps {
-                script {
-                    def response = sh(script: "docker start ${env.CONTAINER_ID}", returnStatus: true)
-                    if (response == 0) {
-                        echo "Ok"
-                    } else {
-                        echo "Nicht Ok"
-                    }
-                }
-            }
-        }
+                        case 'REMOVE':
+                            def removeResult = sh(script: "docker rm ${containerId}", returnStatus: true)
+                            if (removeResult == 0) {
+                                echo 'Ok'
+                            } else {
+                                echo 'Nicht Ok'
+                            }
+                            break
 
-        stage('Remove Docker Container') {
-            steps {
-                script {
-                    def response = sh(script: "docker rm ${env.CONTAINER_ID}", returnStatus: true)
-                    if (response == 0) {
-                        echo "Ok"
-                    } else {
-                        echo "Nicht Ok"
+                        default:
+                            echo 'Ungültige Aktion gewählt.'
                     }
                 }
             }
