@@ -7,6 +7,20 @@ pipeline {
     }
 
     stages {
+        stage('Validate Container ID') {
+            steps {
+                script {
+                    def containerId = params.CONTAINER_ID
+                    // Überprüfen, ob der Container existiert
+                    if (containerId && !sh(script: "docker ps -a -q -f id=${containerId}", returnStdout: true).trim()) {
+                        error("Container ID ist ungültig oder der Container existiert nicht.")
+                    } else {
+                        echo "Container ID ${containerId} ist gültig."
+                    }
+                }
+            }
+        }
+
         stage('Docker Action') {
             steps {
                 script {
@@ -33,6 +47,12 @@ pipeline {
                             break
 
                         case 'REMOVE':
+                            // Zuerst sicherstellen, dass der Container gestoppt ist, bevor er gelöscht wird
+                            def stopBeforeRemove = sh(script: "docker stop ${containerId}", returnStatus: true)
+                            if (stopBeforeRemove != 0) {
+                                echo 'Container konnte nicht gestoppt werden, eventuell bereits angehalten oder nicht vorhanden.'
+                            }
+
                             def removeResult = sh(script: "docker rm ${containerId}", returnStatus: true)
                             if (removeResult == 0) {
                                 echo 'Ok'
