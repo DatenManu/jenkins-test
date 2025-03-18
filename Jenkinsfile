@@ -3,7 +3,7 @@ pipeline {
     environment {
         IMAGE_NAME = "dynamic-index"
         PROJECT_NAME = "pipeline-${BUILD_ID}"
-        WEB_API_URL = "htt://localhost:3000/api/docker/created"
+        WEB_API_URL = "http://localhost:3000/api/docker/created" // Update with your actual API URL
     }
     stages {
         stage('Prepare index.html') {
@@ -50,11 +50,8 @@ pipeline {
                 // Define the status based on whether the container ID is present
                 def containerStatus = containerID ? "Started" : "Stopped"
 
-                // Create JSON object with container status and ID
-                def jsonData = JsonOutput.toJson([
-                    containerId: containerID,
-                    status     : containerStatus
-                ])
+                // Create JSON object manually
+                def jsonData = "{ \"containerId\": \"${containerID}\", \"status\": \"${containerStatus}\" }"
 
                 // Send POST request to the web API
                 sh "curl -X POST -H 'Content-Type: application/json' -d '${jsonData}' ${WEB_API_URL}"
