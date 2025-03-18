@@ -3,7 +3,7 @@ pipeline {
     environment {
         IMAGE_NAME = "dynamic-index"
         PROJECT_NAME = "pipeline-${BUILD_ID}"
-        WEB_API_URL = "http://localhost:3000/api/docker/created" // Update with your actual API URL
+        WEB_API_URL = "http://http://192.168.56.1:3000/api/docker/created" // Update with your actual API URL
     }
     stages {
         stage('Prepare index.html') {
