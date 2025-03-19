@@ -68,7 +68,7 @@ pipeline {
                 ).trim()
                 def containerStatus = containerID ? "Started" : "Stopped"
                 def jsonData = "{ \"containerId\": \"${containerID}\", \"status\": \"${containerStatus}\" }"
-                sh "curl -X POST -H 'Content-Type: application/json' -H 'Authorization: x-api-key ${params.API_KEY}' -d '${jsonData}' ${WEB_API_URL}"
+                sh "curl -X POST -H 'Content-Type: application/json' -H 'x-api-key: ${params.API_KEY}' -d '${jsonData}' ${WEB_API_URL}"
                 echo 'Pipeline complete. Containers will remain running.'
             }
         }
