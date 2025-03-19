@@ -66,7 +66,7 @@ pipeline {
                     script: "docker ps --filter 'name=${PROJECT_NAME}_webapp' --format '{{.ID}}'",
                     returnStdout: true
                 ).trim()
-                def containerStatus = containerID ? "Started" : "Stopped"
+                def containerStatus = containerID ? "started" : "stopped"
                 def jsonData = "{ \"containerId\": \"${containerID}\", \"status\": \"${containerStatus}\", \"containerName\": \"${params.name}\" }"
                 sh "curl -X POST -H 'Content-Type: application/json' -H 'x-api-key: ${params.API_KEY}' -d '${jsonData}' ${WEB_API_URL}"
                 echo 'Pipeline complete. Containers will remain running.'
