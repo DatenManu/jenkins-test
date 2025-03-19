@@ -3,6 +3,7 @@ pipeline {
 
     parameters {
         string(name: 'API_KEY', defaultValue: '', description: 'API key to access the pipeline and API')
+        string(name: 'name', defaultValue: '', description: 'Name of client that is created')
     }
 
     environment {
