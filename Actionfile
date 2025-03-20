@@ -3,6 +3,7 @@ pipeline {
 
     parameters {
         string(name: 'API_KEY', defaultValue: '', description: 'API key to access the API')
+        string(name: 'name', defaultValue: '', description: 'Name of the client container')
         string(name: 'containerId', defaultValue: '', description: 'ID of the WebApp container')
         choice(name: 'ACTION', choices: ['start', 'stop', 'remove'], description: 'Action to perform on the container stack')
     }
@@ -90,10 +91,10 @@ pipeline {
                     returnStdout: true
                 ).trim() ? "running" : "stopped"
 
-                def jsonData = "{ \"containerId\": \"${params.containerId}\", \"status\": \"${stackStatus}\", \"containerName\": \"pipeline-stack\" }"
+                def jsonData = "{ \"containerId\": \"${params.containerId}\", \"status\": \"${stackStatus}\", \"containerName\": \"${params.name}\" }"
 
                 sh "curl -X POST -H 'Content-Type: application/json' -H 'x-api-key: ${params.API_KEY}' -d '${jsonData}' ${WEB_API_URL}"
-                echo "Stack ${params.containerId} is now ${stackStatus}"
+                echo "Stack ${params.name} is now ${stackStatus}"
             }
         }
     }
