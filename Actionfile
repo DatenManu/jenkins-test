@@ -42,13 +42,13 @@ pipeline {
 
                     def stackContainersOutput = sh(
                         script: """
-                        docker ps -a --format '{{.ID}} {{.Names}}' | grep '${shortContainerId}' | awk '{print \$2}'
+                        docker ps -a --format '{{.ID}} {{.Names}}' | grep 'pipeline-[0-9]*_' | grep '${shortContainerId}' | awk '{print \$2}'
                         """,
                         returnStdout: true
                     ).trim()
 
                     if (!stackContainersOutput) {
-                        error("No containers found for WebApp container ID: ${params.containerId}")
+                        error("No stack containers found for WebApp container ID: ${params.containerId}")
                     }
 
                     def stackContainers = stackContainersOutput.split("\n")
@@ -65,13 +65,13 @@ pipeline {
                     def actionCommand = ""
                     
                     if (params.ACTION == 'stop') {
-                        echo "Stopping stack: ${env.STACK_CONTAINERS}"
+                        echo "Stopping entire stack: ${env.STACK_CONTAINERS}"
                         actionCommand = "docker stop ${env.STACK_CONTAINERS}"
                     } else if (params.ACTION == 'remove') {
                         echo "Removing entire stack: ${env.STACK_CONTAINERS}"
                         actionCommand = "docker rm -f ${env.STACK_CONTAINERS}"
                     } else if (params.ACTION == 'start') {
-                        echo "Starting stack: ${env.STACK_CONTAINERS}"
+                        echo "Starting entire stack: ${env.STACK_CONTAINERS}"
                         actionCommand = "docker start ${env.STACK_CONTAINERS}"
                     } else {
                         error("Invalid action specified: ${params.ACTION}")
