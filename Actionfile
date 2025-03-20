@@ -4,7 +4,8 @@ pipeline {
     parameters {
         string(name: 'API_KEY', defaultValue: '', description: 'API key to access the API')
         string(name: 'name', defaultValue: '', description: 'Name of the client container')
-        choice(name: 'ACTION', choices: ['start', 'stop', 'remove'], description: 'Action to perform on the container')
+        string(name: 'containerId', defaultValue: '', description: 'ID of the WebApp container')
+        choice(name: 'ACTION', choices: ['start', 'stop', 'remove'], description: 'Action to perform on the container stack')
     }
 
     environment {
@@ -22,30 +23,47 @@ pipeline {
             }
         }
 
-        stage('Manage Container') {
+        stage('Find Stack Containers') {
             steps {
                 script {
-                    def containerID = sh(
-                        script: "docker ps -a --filter 'name=${params.name}' --format '{{.ID}}'",
-                        returnStdout: true
-                    ).trim()
+                    echo "Finding all containers belonging to WebApp container ID: ${params.containerId}"
 
-                    if (!containerID) {
-                        error("No container found with the name: ${params.name}")
+                    def stackContainers = sh(
+                        script: """
+                        docker ps -a --format '{{.ID}} {{.Names}}' | grep '${params.containerId:0:12}' | awk '{print \$1}'
+                        """,
+                        returnStdout: true
+                    ).trim().split("\n")
+
+                    if (stackContainers.isEmpty()) {
+                        error("No containers found for WebApp container ID: ${params.containerId}")
                     }
 
+                    echo "Stack containers found: ${stackContainers.join(', ')}"
+                    env.STACK_CONTAINERS = stackContainers.join(' ')
+                }
+            }
+        }
+
+        stage('Manage Container Stack') {
+            steps {
+                script {
+                    def actionCommand = ""
+                    
                     if (params.ACTION == 'stop') {
-                        echo "Stopping container ${params.name}"
-                        sh "docker stop ${containerID}"
+                        echo "Stopping stack: ${env.STACK_CONTAINERS}"
+                        actionCommand = "docker stop ${env.STACK_CONTAINERS}"
                     } else if (params.ACTION == 'remove') {
-                        echo "Removing container ${params.name}"
-                        sh "docker rm -f ${containerID}"
+                        echo "Removing stack: ${env.STACK_CONTAINERS}"
+                        actionCommand = "docker rm -f ${env.STACK_CONTAINERS}"
                     } else if (params.ACTION == 'start') {
-                        echo "Starting container ${params.name}"
-                        sh "docker start ${containerID}"
+                        echo "Starting stack: ${env.STACK_CONTAINERS}"
+                        actionCommand = "docker start ${env.STACK_CONTAINERS}"
                     } else {
                         error("Invalid action specified: ${params.ACTION}")
                     }
+
+                    sh actionCommand
                 }
             }
         }
@@ -54,16 +72,15 @@ pipeline {
     post {
         always {
             script {
-                def containerID = sh(
-                    script: "docker ps --filter 'name=${params.name}' --format '{{.ID}}'",
+                def stackStatus = sh(
+                    script: "docker ps --filter 'id=${params.containerId}' --format '{{.ID}}'",
                     returnStdout: true
-                ).trim()
+                ).trim() ? "running" : "stopped"
 
-                def containerStatus = containerID ? "running" : "stopped"
-                def jsonData = "{ \"containerId\": \"${containerID}\", \"status\": \"${containerStatus}\", \"containerName\": \"${params.name}\" }"
+                def jsonData = "{ \"containerId\": \"${params.containerId}\", \"status\": \"${stackStatus}\", \"containerName\": \"${params.name}\" }"
 
                 sh "curl -X POST -H 'Content-Type: application/json' -H 'x-api-key: ${params.API_KEY}' -d '${jsonData}' ${WEB_API_URL}"
-                echo "Container ${params.name} is now ${containerStatus}"
+                echo "Stack ${params.name} is now ${stackStatus}"
             }
         }
     }
