@@ -36,23 +36,32 @@ pipeline {
         stage('Find Pipeline Stack') {
             steps {
                 script {
-                    echo "Finding pipeline ID for any container with WebApp ID: ${params.containerId}"
+                    echo "Finding pipeline ID for WebApp container: ${params.containerId}"
 
-                    // ✅ Ermittelt die Pipeline-ID aus einem der Container (WebApp, MariaDB, Redis)
-                    def pipelineId = sh(
+                    // ✅ Container-Name aus der Container-ID ermitteln
+                    def containerName = sh(
                         script: """
-                        docker ps -a --format '{{.Names}}' | grep '${params.containerId}' | awk -F '_' '{print \$1}'
+                        docker inspect --format='{{.Name}}' ${params.containerId} | sed 's/^\\///'
                         """,
                         returnStdout: true
                     ).trim()
 
-                    if (!pipelineId) {
-                        error("No pipeline ID found for container ID: ${params.containerId}")
+                    if (!containerName) {
+                        error("No container name found for ID: ${params.containerId}")
+                    }
+
+                    echo "Detected container name: ${containerName}"
+
+                    // ✅ Pipeline-ID aus dem Container-Namen extrahieren
+                    def pipelineId = containerName.replaceAll('_.*', '')
+
+                    if (!pipelineId.startsWith("pipeline-")) {
+                        error("Invalid pipeline ID extracted: ${pipelineId}")
                     }
 
                     echo "Detected pipeline: ${pipelineId}"
 
-                    // ✅ Alle Container der Pipeline finden (egal ob WebApp, MariaDB oder Redis)
+                    // ✅ Alle Container der Pipeline finden (`pipeline-XX_*`)
                     def stackContainersOutput = sh(
                         script: """
                         docker ps -a --format '{{.ID}} {{.Names}}' | grep '${pipelineId}_' | awk '{print \$2}'
