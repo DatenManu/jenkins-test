@@ -23,24 +23,35 @@ pipeline {
             }
         }
 
+        stage('Validate Container ID') {
+            steps {
+                script {
+                    if (!params.containerId?.trim()) {
+                        error("Container ID is required to find the stack.")
+                    }
+                }
+            }
+        }
+
         stage('Find Stack Containers') {
             steps {
                 script {
                     echo "Finding all containers belonging to WebApp container ID: ${params.containerId}"
 
-                    // Groovy erlaubt kein Slicing wie in Python -> Workaround mit `substring(0,12)`
                     def shortContainerId = params.containerId.length() > 12 ? params.containerId.substring(0,12) : params.containerId
 
-                    def stackContainers = sh(
+                    def stackContainersOutput = sh(
                         script: """
                         docker ps -a --format '{{.ID}} {{.Names}}' | grep '${shortContainerId}' | awk '{print \$1}'
                         """,
                         returnStdout: true
-                    ).trim().split("\n")
+                    ).trim()
 
-                    if (stackContainers.isEmpty()) {
+                    if (!stackContainersOutput) {
                         error("No containers found for WebApp container ID: ${params.containerId}")
                     }
+
+                    def stackContainers = stackContainersOutput.split("\n")
 
                     echo "Stack containers found: ${stackContainers.join(', ')}"
                     env.STACK_CONTAINERS = stackContainers.join(' ')
