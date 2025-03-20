@@ -84,18 +84,17 @@ pipeline {
     }
 
     post {
-        always {
-            script {
-                def stackStatus = sh(
-                    script: "docker ps --filter 'id=${params.containerId}' --format '{{.ID}}'",
-                    returnStdout: true
-                ).trim() ? "running" : "stopped"
+    always {
+        script {
+            def stackStatus = sh(
+                script: "docker ps --filter 'id=${params.containerId}' --format '{{.ID}}'",
+                returnStdout: true
+            ).trim() ? "running" : "stopped"
 
-                def jsonData = "{ \"containerId\": \"${params.containerId}\", \"status\": \"${stackStatus}\", \"containerName\": \"${params.name}\" }"
+            def jsonData = "{ \"containerId\": \"${params.containerId}\", \"status\": \"${stackStatus}\", \"containerName\": \"${params.name}\" }"
 
-                sh "curl -X POST -H 'Content-Type: application/json' -H 'x-api-key: ${params.API_KEY}' -d '${jsonData}' ${WEB_API_URL}"
-                echo "Stack ${params.name} is now ${stackStatus}"
-            }
+            sh "curl -X POST -H 'Content-Type: application/json' -H 'x-api-key: ${params.API_KEY}' -d '${jsonData}' http://192.168.56.1:3000/api/docker/update-status"
+            echo "Container ${params.name} is now ${stackStatus}"
         }
     }
 }
