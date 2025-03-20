@@ -36,9 +36,9 @@ pipeline {
         stage('Find Pipeline Stack') {
             steps {
                 script {
-                    echo "Finding all containers belonging to pipeline ID from WebApp container: ${params.containerId}"
+                    echo "Finding all containers belonging to pipeline for WebApp container: ${params.containerId}"
 
-                    // ✅ Extrahiere die Pipeline-ID aus dem WebApp-Container-Namen
+                    // ✅ Direkt die Pipeline-ID aus der WebApp-Container-ID extrahieren
                     def pipelineId = sh(
                         script: """
                         docker ps -a --format '{{.Names}}' | grep '${params.containerId}' | awk -F '_' '{print \$1}'
@@ -52,10 +52,10 @@ pipeline {
 
                     echo "Detected pipeline: ${pipelineId}"
 
-                    // ✅ Finde ALLE Container, die zu `pipeline-XX` gehören
+                    // ✅ Alle Container mit `pipeline-ID` finden
                     def stackContainersOutput = sh(
                         script: """
-                        docker ps -a --format '{{.ID}} {{.Names}}' | grep '${pipelineId}' | awk '{print \$2}'
+                        docker ps -a --format '{{.ID}} {{.Names}}' | grep '${pipelineId}' | awk '{print \$1}'
                         """,
                         returnStdout: true
                     ).trim()
@@ -76,6 +76,10 @@ pipeline {
         stage('Manage Pipeline Stack') {
             steps {
                 script {
+                    if (!env.STACK_CONTAINERS?.trim()) {
+                        error("No containers to manage for pipeline: ${env.PIPELINE_ID}")
+                    }
+
                     def actionCommand = ""
 
                     if (params.ACTION == 'stop') {
