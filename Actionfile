@@ -28,9 +28,12 @@ pipeline {
                 script {
                     echo "Finding all containers belonging to WebApp container ID: ${params.containerId}"
 
+                    // Groovy erlaubt kein Slicing wie in Python -> Workaround mit `substring(0,12)`
+                    def shortContainerId = params.containerId.length() > 12 ? params.containerId.substring(0,12) : params.containerId
+
                     def stackContainers = sh(
                         script: """
-                        docker ps -a --format '{{.ID}} {{.Names}}' | grep '${params.containerId:0:12}' | awk '{print \$1}'
+                        docker ps -a --format '{{.ID}} {{.Names}}' | grep '${shortContainerId}' | awk '{print \$1}'
                         """,
                         returnStdout: true
                     ).trim().split("\n")
