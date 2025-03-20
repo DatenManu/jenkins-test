@@ -36,9 +36,9 @@ pipeline {
         stage('Find Pipeline Stack') {
             steps {
                 script {
-                    echo "Finding pipeline ID for WebApp container: ${params.containerId}"
+                    echo "Finding pipeline ID for any container with WebApp ID: ${params.containerId}"
 
-                    // ✅ Pipeline-ID aus dem WebApp-Container herausfinden
+                    // ✅ Ermittelt die Pipeline-ID aus einem der Container (WebApp, MariaDB, Redis)
                     def pipelineId = sh(
                         script: """
                         docker ps -a --format '{{.Names}}' | grep '${params.containerId}' | awk -F '_' '{print \$1}'
@@ -47,15 +47,15 @@ pipeline {
                     ).trim()
 
                     if (!pipelineId) {
-                        error("No pipeline ID found for WebApp container ID: ${params.containerId}")
+                        error("No pipeline ID found for container ID: ${params.containerId}")
                     }
 
                     echo "Detected pipeline: ${pipelineId}"
 
-                    // ✅ Alle Container der Pipeline finden (WebApp, MariaDB, Redis)
+                    // ✅ Alle Container der Pipeline finden (egal ob WebApp, MariaDB oder Redis)
                     def stackContainersOutput = sh(
                         script: """
-                        docker ps -a --format '{{.ID}} {{.Names}}' | grep '${pipelineId}_[a-z]*' | awk '{print \$2}'
+                        docker ps -a --format '{{.ID}} {{.Names}}' | grep '${pipelineId}_' | awk '{print \$2}'
                         """,
                         returnStdout: true
                     ).trim()
@@ -80,16 +80,18 @@ pipeline {
                         error("No containers to manage for pipeline: ${env.PIPELINE_ID}")
                     }
 
+                    echo "Executing ${params.ACTION} on: ${env.STACK_CONTAINERS}"
+
                     def actionCommand = ""
 
                     if (params.ACTION == 'stop') {
-                        echo "Stopping entire pipeline stack: ${env.PIPELINE_ID}"
+                        echo "Stopping all containers in pipeline: ${env.PIPELINE_ID}"
                         actionCommand = "docker stop \$(docker ps -q --filter 'name=${env.PIPELINE_ID}_')"
                     } else if (params.ACTION == 'remove') {
-                        echo "Removing entire pipeline stack: ${env.PIPELINE_ID}"
+                        echo "Removing all containers in pipeline: ${env.PIPELINE_ID}"
                         actionCommand = "docker rm -f \$(docker ps -aq --filter 'name=${env.PIPELINE_ID}_')"
                     } else if (params.ACTION == 'start') {
-                        echo "Starting entire pipeline stack: ${env.PIPELINE_ID}"
+                        echo "Starting all containers in pipeline: ${env.PIPELINE_ID}"
                         actionCommand = "docker start \$(docker ps -aq --filter 'name=${env.PIPELINE_ID}_')"
                     } else {
                         error("Invalid action specified: ${params.ACTION}")
