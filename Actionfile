@@ -68,7 +68,7 @@ pipeline {
                         echo "Stopping stack: ${env.STACK_CONTAINERS}"
                         actionCommand = "docker stop ${env.STACK_CONTAINERS}"
                     } else if (params.ACTION == 'remove') {
-                        echo "Removing stack: ${env.STACK_CONTAINERS}"
+                        echo "Removing entire stack: ${env.STACK_CONTAINERS}"
                         actionCommand = "docker rm -f ${env.STACK_CONTAINERS}"
                     } else if (params.ACTION == 'start') {
                         echo "Starting stack: ${env.STACK_CONTAINERS}"
@@ -86,10 +86,14 @@ pipeline {
     post {
         always {
             script {
-                def stackStatus = sh(
-                    script: "docker ps --filter 'id=${params.containerId}' --format '{{.ID}}'",
-                    returnStdout: true
-                ).trim() ? "running" : "stopped"
+                def isDeleted = params.ACTION == 'remove'
+
+                def stackStatus = isDeleted ? "deleted" : (
+                    sh(
+                        script: "docker ps --filter 'id=${params.containerId}' --format '{{.ID}}'",
+                        returnStdout: true
+                    ).trim() ? "running" : "stopped"
+                )
 
                 def jsonData = "{ \"containerId\": \"${params.containerId}\", \"status\": \"${stackStatus}\", \"containerName\": \"${params.name}\" }"
 
