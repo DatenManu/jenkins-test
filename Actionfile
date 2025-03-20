@@ -33,64 +33,47 @@ pipeline {
             }
         }
 
-        stage('Find Pipeline Stack') {
+        stage('Find Stack Containers') {
             steps {
                 script {
-                    echo "Finding pipeline ID for WebApp container: ${params.containerId}"
+                    echo "Finding all containers belonging to WebApp container ID: ${params.containerId}"
 
-                    // ✅ Pipeline-ID anhand des WebApp-Containers herausfinden
-                    def pipelineId = sh(
-                        script: """
-                        docker ps -a --format '{{.Names}}' | grep '${params.containerId}' | awk -F '_' '{print \$1}'
-                        """,
-                        returnStdout: true
-                    ).trim()
+                    def shortContainerId = params.containerId.length() > 12 ? params.containerId.substring(0,12) : params.containerId
 
-                    if (!pipelineId) {
-                        error("No pipeline ID found for WebApp container ID: ${params.containerId}")
-                    }
-
-                    echo "Detected pipeline: ${pipelineId}"
-
-                    // ✅ Alle Container der Pipeline finden (`pipeline-XX_*`)
+                    // ✅ Stack anhand der WebApp-Container-ID finden (Alle Container mit `pipeline-XX_` löschen!)
                     def stackContainersOutput = sh(
                         script: """
-                        docker ps -a --format '{{.ID}} {{.Names}}' | grep '${pipelineId}_' | awk '{print \$2}'
+                        docker ps -a --format '{{.ID}} {{.Names}}' | grep 'pipeline-[0-9]*_' | grep '${shortContainerId}' | awk '{print \$2}'
                         """,
                         returnStdout: true
                     ).trim()
 
                     if (!stackContainersOutput) {
-                        error("No stack containers found for pipeline: ${pipelineId}")
+                        error("No stack containers found for WebApp container ID: ${params.containerId}")
                     }
 
                     def stackContainers = stackContainersOutput.split("\n")
 
                     echo "Stack containers found: ${stackContainers.join(', ')}"
                     env.STACK_CONTAINERS = stackContainers.join(' ')
-                    env.PIPELINE_ID = pipelineId
                 }
             }
         }
 
-        stage('Manage Pipeline Stack') {
+        stage('Manage Container Stack') {
             steps {
                 script {
-                    if (!env.STACK_CONTAINERS?.trim()) {
-                        error("No containers to manage for pipeline: ${env.PIPELINE_ID}")
-                    }
-
                     def actionCommand = ""
-
+                    
                     if (params.ACTION == 'stop') {
-                        echo "Stopping entire pipeline stack: ${env.PIPELINE_ID}"
-                        actionCommand = "docker stop \$(docker ps -q --filter 'name=${env.PIPELINE_ID}_')"
+                        echo "Stopping entire stack: ${env.STACK_CONTAINERS}"
+                        actionCommand = "docker stop ${env.STACK_CONTAINERS}"
                     } else if (params.ACTION == 'remove') {
-                        echo "Removing entire pipeline stack: ${env.PIPELINE_ID}"
-                        actionCommand = "docker rm -f \$(docker ps -aq --filter 'name=${env.PIPELINE_ID}_')"
+                        echo "Removing entire stack: ${env.STACK_CONTAINERS}"
+                        actionCommand = "docker rm -f ${env.STACK_CONTAINERS}" // 🔥 Jetzt ALLE Container löschen
                     } else if (params.ACTION == 'start') {
-                        echo "Starting entire pipeline stack: ${env.PIPELINE_ID}"
-                        actionCommand = "docker start \$(docker ps -aq --filter 'name=${env.PIPELINE_ID}_')"
+                        echo "Starting entire stack: ${env.STACK_CONTAINERS}"
+                        actionCommand = "docker start ${env.STACK_CONTAINERS}"
                     } else {
                         error("Invalid action specified: ${params.ACTION}")
                     }
@@ -108,7 +91,7 @@ pipeline {
 
                 def stackStatus = isDeleted ? "deleted" : (
                     sh(
-                        script: "docker ps --filter 'name=${env.PIPELINE_ID}_' --format '{{.ID}}'",
+                        script: "docker ps --filter 'id=${params.containerId}' --format '{{.ID}}'",
                         returnStdout: true
                     ).trim() ? "running" : "stopped"
                 )
@@ -116,7 +99,7 @@ pipeline {
                 def jsonData = "{ \"containerId\": \"${params.containerId}\", \"status\": \"${stackStatus}\", \"containerName\": \"${params.name}\" }"
 
                 sh "curl -X POST -H 'Content-Type: application/json' -H 'x-api-key: ${params.API_KEY}' -d '${jsonData}' ${WEB_API_URL}"
-                echo "Pipeline stack ${params.name} is now ${stackStatus}"
+                echo "Stack ${params.name} is now ${stackStatus}"
             }
         }
     }
